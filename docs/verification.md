@@ -12,7 +12,7 @@
 | تست | Vitest 5.1.0 و Playwright 1.65.0 |
 | مرورگر بررسی | Chrome for Testing 151.0.7922.34؛ Chromium موجود با مسیر صریح |
 | تنظیم Mock در E2E | تأخیر ۱۰۰۰ میلی‌ثانیه؛ سناریوهای success، error، timeout و empty در سرورهای جدا |
-| شناسه snapshot منبع | `6d241de216805e9fdd84fbbb06773d045407ef8441e479094bddfc697f52730e` |
+| شناسه snapshot منبع | `e84aa01a23e4deb0aa3ee679133d10235351727db1f3828497e5fc9ae5e627fe` |
 
 شناسه بالا SHA-256 محتوای مسیرهای src، tests و public و تنظیمات build/test و lockfile است؛ فایل‌های گزارش و خروجی build در آن نیستند. این شناسه جای Commit Git نیست. مخزن محلی در همین مرحله ایجاد شده است؛ تاریخچه قدیمی بازسازی نشده و Push یا Deploy انجام نشده است.
 
