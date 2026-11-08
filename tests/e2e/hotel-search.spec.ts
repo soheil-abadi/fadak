@@ -115,6 +115,8 @@ test('renders within mobile and tablet viewports without horizontal overflow', a
     }
     // Remove keyboard focus from the fixed skip link before capturing the resting layout.
     await page.getByRole('heading', { name: 'هتل‌های تهران', exact: true }).click();
+    // Capture from the top so offscreen fixed elements stay outside the full-page image.
+    await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
     await page.screenshot({ path: testInfo.outputPath(`hotels-${width}.png`), fullPage: true });
   }
 });
