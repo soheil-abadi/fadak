@@ -347,10 +347,7 @@ h1 em:after {
 }
 .date-input {
   cursor: pointer;
-}
-.date-input::placeholder {
-  color: #4d5e53;
-  opacity: 1;
+  text-align: start;
 }
 .guest-selects {
   @apply flex items-center;
@@ -1944,6 +1941,11 @@ h2 {
 }
 .calendar-arrow:hover {
   background: #edf4ed;
+}
+.calendar-arrow[aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: default;
+  background: transparent;
 }
 .rmdp-wrapper {
   font-family: 'Vazirmatn', sans-serif;

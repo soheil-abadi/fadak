@@ -113,6 +113,8 @@ test('renders within mobile and tablet viewports without horizontal overflow', a
         )
         .toBeGreaterThan(0);
     }
+    // Remove keyboard focus from the fixed skip link before capturing the resting layout.
+    await page.getByRole('heading', { name: 'هتل‌های تهران', exact: true }).click();
     await page.screenshot({ path: testInfo.outputPath(`hotels-${width}.png`), fullPage: true });
   }
 });
@@ -171,4 +173,70 @@ test('restores a valid star filter even when there is no matching supply', async
   await expect(
     page.getByRole('heading', { name: 'برای این جست‌وجو اقامتگاهی پیدا نشد' }),
   ).toBeVisible();
+});
+
+test('keeps manual dates synchronized and validates Enter without blur', async ({ page }) => {
+  test.skip(scenario !== 'success');
+  await page.goto(`/hotels?${query}`);
+  await page.getByText('وارد کردن تاریخ به‌صورت متنی', { exact: true }).click();
+  const checkIn = page.getByRole('textbox', { name: 'تاریخ ورود شمسی', exact: true });
+  const checkOut = page.getByRole('textbox', { name: 'تاریخ خروج شمسی', exact: true });
+  const originalCheckout = await checkOut.inputValue();
+  await checkIn.focus();
+  await page.keyboard.press('Tab');
+  await expect(checkOut).toHaveValue(originalCheckout);
+  await checkOut.fill('۱۴۰۵/۱۳/۴۰');
+  await checkOut.press('Enter');
+  await expect(checkOut).toBeFocused();
+  await expect(checkOut).toHaveAttribute('aria-invalid', 'true');
+  await expect(checkOut).toHaveAccessibleDescription(/تاریخ شمسی معتبر/);
+  await expect(page).toHaveURL(new RegExp(`checkOut=${addDays(today, 9)}`));
+  await checkOut.fill(originalCheckout);
+  await checkOut.press('Enter');
+  await expect(page.getByTestId('hotel-card')).toHaveCount(3);
+  await expect(checkOut).toHaveAttribute('aria-invalid', 'false');
+});
+
+test('supports keyboard calendar navigation and keeps the popup inside narrow screens', async ({
+  page,
+}, testInfo) => {
+  test.skip(scenario !== 'success');
+  for (const width of [375, 720, 1440]) {
+    // 720 CSS pixels also checks the reflow of a 1440px window at 200% browser zoom.
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/hotels');
+    // Wait for a real form interaction before measuring focus across hydrated controls.
+    await page.getByRole('button', { name: 'جست‌وجوی هتل', exact: true }).click();
+    await expect(page.getByLabel('مقصد سفر')).toHaveAttribute('aria-invalid', 'true');
+    await expect(page.getByLabel('مقصد سفر')).toBeFocused();
+    await page.keyboard.press('Tab');
+    const input = page.getByLabel('تاریخ ورود و خروج', { exact: true });
+    await expect(input).toBeFocused();
+    await input.press('Enter');
+    const calendar = page.locator('.rmdp-calendar');
+    await expect(calendar).toBeVisible();
+    const bounds = await calendar.boundingBox();
+    expect(bounds?.x).toBeGreaterThanOrEqual(0);
+    expect((bounds?.x ?? 0) + (bounds?.width ?? 0)).toBeLessThanOrEqual(width);
+    const monthHeading = calendar.locator('.rmdp-header-values');
+    const originalMonth = await monthHeading.innerText();
+    const nextMonth = page.getByRole('button', { name: 'ماه بعد', exact: true });
+    await nextMonth.focus();
+    await nextMonth.press('Enter');
+    await expect(monthHeading).not.toHaveText(originalMonth);
+    const previousMonth = page.getByRole('button', { name: 'ماه قبل', exact: true });
+    await previousMonth.focus();
+    await previousMonth.press('Space');
+    await expect(monthHeading).toHaveText(originalMonth);
+    await expect(previousMonth).toBeFocused();
+    const outline = await previousMonth.evaluate((node) => getComputedStyle(node).outlineStyle);
+    expect(outline).not.toBe('none');
+    await page.screenshot({ path: testInfo.outputPath(`calendar-${width}.png`) });
+    await page.keyboard.press('Escape');
+    await expect(calendar).not.toBeVisible();
+    await expect(input).toBeFocused();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+  }
 });
