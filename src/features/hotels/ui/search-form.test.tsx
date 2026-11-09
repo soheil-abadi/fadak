@@ -49,11 +49,25 @@ describe('Persian search form', () => {
       />,
       { wrapper: SearchNavigationProvider },
     );
-    await user.selectOptions(screen.getByLabelText('مقصد سفر'), 'kish');
+    const city = screen.getByRole('combobox', { name: 'مقصد سفر' });
+    await user.clear(city);
+    await user.type(city, 'کیش');
+    await user.click(screen.getByRole('option', { name: /کیش/ }));
     await user.click(screen.getByRole('button', { name: 'جست‌وجوی هتل' }));
     await waitFor(() => expect(push).toHaveBeenCalled());
     expect(push.mock.lastCall?.[0]).toContain('city=kish');
     expect(push.mock.lastCall?.[0]).not.toContain('stars=');
+  });
+  it('keeps rooms and guests in the submitted query from the occupancy panel', async () => {
+    const user = userEvent.setup();
+    render(<SearchForm today="2026-11-07" raw={restored} />, { wrapper: SearchNavigationProvider });
+    await user.click(screen.getByRole('button', { name: /مسافر، .* اتاق/ }));
+    await user.click(screen.getByRole('button', { name: 'افزایش تعداد اتاق' }));
+    await user.click(screen.getByRole('button', { name: 'افزایش تعداد مسافر' }));
+    await user.click(screen.getByRole('button', { name: 'جست‌وجوی هتل' }));
+    await waitFor(() => expect(push).toHaveBeenCalled());
+    expect(push.mock.lastCall?.[0]).toContain('rooms=2');
+    expect(push.mock.lastCall?.[0]).toContain('guests=3');
   });
   it('preserves checkout when check-in is unchanged or edited to a compatible date', async () => {
     const { user, checkIn, checkOut } = await manualForm();

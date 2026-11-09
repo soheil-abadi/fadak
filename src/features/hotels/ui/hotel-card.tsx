@@ -75,12 +75,12 @@ export function HotelCard({
       <div className="hotel-price">
         <small>هر شب، یک اتاق</small>
         <p>
-          <strong>{formatPrice(hotel.quote.nightlyPerRoom.amount)}</strong>
+          <strong className="numeric">{formatPrice(hotel.quote.nightlyPerRoom.amount)}</strong>
           <span>تومان</span>
         </p>
         <small>
           {formatNumber(hotel.quote.nights)} شب، {formatNumber(hotel.quote.rooms)} اتاق:{' '}
-          <b>{formatPrice(hotel.quote.total.amount)}</b> تومان
+          <b className="numeric">{formatPrice(hotel.quote.total.amount)}</b> تومان
         </small>
         <Link className="button button-outline" href={href}>
           مشاهده اقامتگاه <ArrowUpLeft size={17} />

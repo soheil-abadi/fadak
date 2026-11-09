@@ -18,14 +18,13 @@ test('restores URL, filters, sorts, refreshes, navigates history and previews a 
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto(`/hotels?${query}`);
   await expect(page.getByTestId('hotel-card')).toHaveCount(3);
-  await expect(page.getByLabel('مقصد سفر')).toHaveValue('tehran');
-  await page.getByLabel('تا', { exact: true }).fill('3000000');
-  await page.locator('input[name="stars"][value="4"]').check();
+  await expect(page.getByRole('combobox', { name: 'مقصد سفر' })).toHaveValue('تهران');
+  await page.locator('#desktop-max-price').fill('3000000');
+  await page.locator('input[name="desktop-stars"][value="4"]').check();
   await page.getByRole('button', { name: 'اعمال فیلترها' }).click();
   await expect(page).toHaveURL(/stars=4/);
   await expect(page.getByTestId('hotel-card')).toHaveCount(1);
   await page.getByRole('combobox', { name: 'مرتب‌سازی نتایج' }).selectOption('rating_desc');
-  await page.getByRole('button', { name: 'اعمال فیلترها', exact: true }).click();
   await expect(page).toHaveURL(/sort=rating_desc/);
   await page.reload();
   await expect(page.getByTestId('hotel-card')).toHaveCount(1);
@@ -51,7 +50,8 @@ test('restores URL, filters, sorts, refreshes, navigates history and previews a 
 test('renders Persian calendar and supports typed Persian dates', async ({ page }) => {
   test.skip(scenario !== 'success');
   await page.goto('/hotels');
-  await page.getByLabel('مقصد سفر').selectOption('tehran');
+  await page.getByRole('combobox', { name: 'مقصد سفر' }).fill('تهران');
+  await page.getByRole('option', { name: /تهران/ }).click();
   await page.locator('#stay-dates').click();
   await expect(page.locator('.rmdp-calendar')).toBeVisible();
   await page.keyboard.press('Escape');
@@ -154,7 +154,8 @@ test('selects the Persian date range with keyboard activation', async ({ page })
   const label = (value: string) =>
     ['day', 'month', 'year'].map((type) => part(value, type)).join(' ');
   await page.goto('/hotels');
-  await page.getByLabel('مقصد سفر').selectOption('tehran');
+  await page.getByRole('combobox', { name: 'مقصد سفر' }).fill('تهران');
+  await page.getByRole('option', { name: /تهران/ }).click();
   await page.getByLabel('تاریخ ورود و خروج', { exact: true }).click();
   await page.getByRole('button', { name: new RegExp(`انتخاب .*${label(today)}`) }).press('Enter');
   const tomorrow = addDays(today, 1);
@@ -171,10 +172,33 @@ test('selects the Persian date range with keyboard activation', async ({ page })
 test('restores a valid star filter even when there is no matching supply', async ({ page }) => {
   test.skip(scenario !== 'success');
   await page.goto(`/hotels?${query}&stars=2`);
-  await expect(page.getByRole('radio', { name: '۲', exact: true })).toBeChecked();
+  await expect(page.locator('input[name="desktop-stars"][value="2"]')).toBeChecked();
   await expect(
     page.getByRole('heading', { name: 'برای این جست‌وجو اقامتگاهی پیدا نشد' }),
   ).toBeVisible();
+});
+
+test('opens the mobile filter drawer, applies a star filter, and restores focus on Escape', async ({
+  page,
+}) => {
+  test.skip(scenario !== 'success');
+  await page.setViewportSize({ width: 375, height: 900 });
+  await page.goto(`/hotels?${query}`);
+  const trigger = page.getByRole('button', { name: /فیلترها/ });
+  await expect(trigger).toBeVisible();
+  await trigger.click();
+  const drawer = page.getByRole('dialog', { name: 'فیلترهای جست‌وجو' });
+  await expect(drawer).toBeVisible();
+  await page.locator('input[name="mobile-stars"][value="4"]').check();
+  await drawer.getByRole('button', { name: 'اعمال فیلترها' }).click();
+  await expect(page).toHaveURL(/stars=4/);
+  await expect(drawer).toBeHidden();
+  await expect(page.getByTestId('hotel-card')).toHaveCount(1);
+  await trigger.click();
+  await expect(drawer).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(drawer).toBeHidden();
+  await expect(trigger).toBeFocused();
 });
 
 test('keeps manual dates synchronized and validates Enter without blur', async ({ page }) => {
@@ -209,8 +233,11 @@ test('supports keyboard calendar navigation and keeps the popup inside narrow sc
     await page.goto('/hotels');
     // Wait for a real form interaction before measuring focus across hydrated controls.
     await page.getByRole('button', { name: 'جست‌وجوی هتل', exact: true }).click();
-    await expect(page.getByLabel('مقصد سفر')).toHaveAttribute('aria-invalid', 'true');
-    await expect(page.getByLabel('مقصد سفر')).toBeFocused();
+    await expect(page.getByRole('combobox', { name: 'مقصد سفر' })).toHaveAttribute(
+      'aria-invalid',
+      'true',
+    );
+    await expect(page.getByRole('combobox', { name: 'مقصد سفر' })).toBeFocused();
     await page.keyboard.press('Tab');
     const input = page.getByLabel('تاریخ ورود و خروج', { exact: true });
     await expect(input).toBeFocused();
@@ -220,13 +247,13 @@ test('supports keyboard calendar navigation and keeps the popup inside narrow sc
     const bounds = await calendar.boundingBox();
     expect(bounds?.x).toBeGreaterThanOrEqual(0);
     expect((bounds?.x ?? 0) + (bounds?.width ?? 0)).toBeLessThanOrEqual(width);
-    const monthHeading = calendar.locator('.rmdp-header-values');
+    const monthHeading = calendar.locator('.rmdp-header-values').first();
     const originalMonth = await monthHeading.innerText();
-    const nextMonth = page.getByRole('button', { name: 'ماه بعد', exact: true });
+    const nextMonth = page.getByRole('button', { name: 'ماه بعد', exact: true }).first();
     await nextMonth.focus();
     await nextMonth.press('Enter');
     await expect(monthHeading).not.toHaveText(originalMonth);
-    const previousMonth = page.getByRole('button', { name: 'ماه قبل', exact: true });
+    const previousMonth = page.getByRole('button', { name: 'ماه قبل', exact: true }).first();
     await previousMonth.focus();
     await previousMonth.press('Space');
     await expect(monthHeading).toHaveText(originalMonth);

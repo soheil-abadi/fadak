@@ -8,6 +8,7 @@ import {
   normalizeDigits,
   parsePersianInput,
   todayInTehran,
+  toPersianDigits,
   toPersianDate,
 } from './calendar';
 describe('date-only and Persian calendar contract', () => {
@@ -42,6 +43,8 @@ describe('date-only and Persian calendar contract', () => {
   });
   it('normalizes Persian and Arabic digits and rejects invalid Persian dates', () => {
     expect(normalizeDigits('۱۲٣٤')).toBe('1234');
+    expect(toPersianDigits('1234')).toBe('۱۲۳۴');
+    expect(toPersianDigits(3900000)).toBe('۳۹۰۰۰۰۰');
     expect(parsePersianInput('۱۴۰۳/۰۱/۰۱')).toBe('2024-03-20');
     expect(parsePersianInput('1404/12/30')).toBeNull();
     expect(parsePersianInput('1405/13/1')).toBeNull();

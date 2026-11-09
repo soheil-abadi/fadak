@@ -8,17 +8,22 @@ const input = {
   rooms: 1,
   guests: 2,
 };
-const hotel = (id: string, price: number, rating: number, stars: 3 | 4 | 5 = 4): HotelSummary => ({
-  id,
-  name: id,
-  city: 'tehran',
-  address: 'نمونه',
-  stars,
-  rating,
-  amenities: [],
-  image: { src: '/images/hotels/room.jpg', alt: 'اتاق' },
-  quote: makeQuote(price, input),
-});
+const hotel = (id: string, price: number, rating: number, stars: 3 | 4 | 5 = 4): HotelSummary => {
+  const image = { src: '/images/hotels/room.jpg', alt: 'اتاق' };
+  return {
+    id,
+    name: id,
+    city: 'tehran',
+    address: 'نمونه',
+    stars,
+    rating,
+    amenities: [],
+    image,
+    images: [image],
+    location: { latitude: 35.7, longitude: 51.4 },
+    quote: makeQuote(price, input),
+  };
+};
 describe('pricing and result rules', () => {
   it('calculates totals in IRR for nights and every room', () => {
     expect(makeQuote(18000000, input).total.amount).toBe(36000000);

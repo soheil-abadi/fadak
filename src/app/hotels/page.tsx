@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { ArrowUpLeft, Check, MapPin, ShieldCheck, Compass, Sparkles } from 'lucide-react';
 import { SearchNavigationProvider } from '@/features/hotels/ui/search-navigation';
 import { SearchForm } from '@/features/hotels/ui/search-form';
-import { Filters, SortControl } from '@/features/hotels/ui/filters';
+import { Filters, MobileFilters, SortControl } from '@/features/hotels/ui/filters';
 import { HotelCard } from '@/features/hotels/ui/hotel-card';
 import { ResultsSkeleton } from '@/features/hotels/ui/skeleton';
 import { EmptyResults, RetryError } from '@/features/hotels/ui/result-states';
@@ -55,14 +55,6 @@ export default async function HotelsPage({
                   از کوچه‌های قدیمی تا ساحل آرام؛ جایی برای خاطره‌های تازه پیدا کنید.
                 </p>
               </div>
-              <span className="hero-stamp">
-                <Compass size={32} strokeWidth={1} />
-                <span>
-                  هر مقصد،
-                  <br />
-                  یک قصه‌ی تازه
-                </span>
-              </span>
             </div>
             <div className="search-panel">
               <div className="search-panel-heading">
@@ -204,7 +196,10 @@ async function HotelResults({ query }: { query: HotelSearchQuery }) {
         <p>
           <strong>{formatNumber(result.data.total)}</strong> اقامتگاه پیدا شد
         </p>
-        <SortControl query={query} />
+        <div className="toolbar-actions">
+          <MobileFilters key={serializeSearch(query)} query={query} />
+          <SortControl query={query} />
+        </div>
       </div>
       {result.data.items.length ? (
         <div className="hotel-list">

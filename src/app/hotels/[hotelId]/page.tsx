@@ -1,4 +1,3 @@
-import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import {
@@ -17,6 +16,8 @@ import {
   serializeSearch,
 } from '@/features/hotels/url-state';
 import { AmenityList } from '@/features/hotels/ui/hotel-card';
+import { HotelGallery } from '@/features/hotels/ui/hotel-gallery';
+import { HotelMapLoader } from '@/features/hotels/ui/hotel-map-loader';
 import { ReservationPreview } from '@/features/hotels/ui/reservation-preview';
 import { RetryError } from '@/features/hotels/ui/result-states';
 import { cityName } from '@/features/hotels/domain/types';
@@ -83,19 +84,10 @@ export default async function HotelDetailsPage({
           </span>
         </span>
       </div>
-      <div className="details-gallery">
-        <Image
-          src={hotel.image.src}
-          alt={hotel.image.alt}
-          fill
-          sizes="(max-width: 768px) 100vw, 1200px"
-          priority
-        />
-        <span>فضای نمایشی اقامتگاه</span>
-      </div>
+      <HotelGallery name={hotel.name} images={hotel.images} />
       <div className="details-layout">
         <section>
-          <p className="eyebrow">چند روز، دور از روزمرگی</p>
+          <p className="eyebrow">درباره اقامتگاه</p>
           <h2>آرامش را به برنامه سفرتان اضافه کنید</h2>
           <p className="hotel-description">{hotel.description}</p>
           <h3>امکانات اقامتگاه</h3>
@@ -119,6 +111,8 @@ export default async function HotelDetailsPage({
               <small>از ورود تا روز خروج</small>
             </span>
           </div>
+          <h3>موقعیت نمایشی</h3>
+          <HotelMapLoader name={hotel.name} location={hotel.location} />
           <div className="detail-notice">
             <ShieldCheck size={22} />
             <p>
@@ -130,7 +124,8 @@ export default async function HotelDetailsPage({
         <aside className="booking-card">
           <span className="eyebrow">خلاصه اقامت شما</span>
           <p className="booking-rate">
-            <strong>{formatPrice(hotel.quote.nightlyPerRoom.amount)}</strong> تومان{' '}
+            <strong className="numeric">{formatPrice(hotel.quote.nightlyPerRoom.amount)}</strong>{' '}
+            تومان{' '}
             <small>هر شب، یک اتاق</small>
           </p>
           <dl className="booking-summary">
@@ -146,12 +141,15 @@ export default async function HotelDetailsPage({
               <dt>
                 {formatNumber(hotel.quote.nights)} شب × {formatNumber(input.rooms)} اتاق
               </dt>
-              <dd>{formatPrice(hotel.quote.total.amount)} تومان</dd>
+              <dd>
+                <span className="numeric">{formatPrice(hotel.quote.total.amount)}</span> تومان
+              </dd>
             </div>
             <div className="summary-total">
               <dt>مبلغ کل اقامت</dt>
               <dd>
-                {formatPrice(hotel.quote.total.amount)} <small>تومان</small>
+                <span className="numeric">{formatPrice(hotel.quote.total.amount)}</span>{' '}
+                <small>تومان</small>
               </dd>
             </div>
           </dl>

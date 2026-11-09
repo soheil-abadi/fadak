@@ -94,7 +94,7 @@ flowchart TD
 
 ## مرزهای رندر و تجربه انتظار
 
-صفحه و کارت‌ها سروری باقی می‌مانند. جزیره‌های تعاملی شامل فرم، تقویم، کنترل فیلتر و مرتب‌سازی، و پنجره پیش‌نمایش‌اند. Client بودن یک کنترل نباید تمام فهرست را وارد bundle آن کند. این تفکیک با [راهنمای رسمی Server و Client Components](https://nextjs.org/docs/app/getting-started/server-and-client-components) سازگار است.
+صفحه و کارت‌ها سروری باقی می‌مانند. جزیره‌های تعاملی شامل فرم، جعبه جست‌وجوی مقصد، تقویم، پنل اتاق و مسافر، کنترل فیلتر و کشوی فیلتر موبایل، مرتب‌سازی، گالری lightbox، نقشه Leaflet و پنجره پیش‌نمایش‌اند. Client بودن یک کنترل نباید تمام فهرست را وارد bundle آن کند. نقشه فقط در کلاینت با `dynamic` و `ssr: false` بارگذاری می‌شود. این تفکیک با [راهنمای رسمی Server و Client Components](https://nextjs.org/docs/app/getting-started/server-and-client-components) سازگار است.
 
 `loading.tsx` انتظار ورود به مسیر را پوشش می‌دهد. نتیجه async در Suspense با کلید query نرمال‌شده قرار می‌گیرد تا تغییر query نیز fallback مناسب داشته باشد؛ صرف وجود loading مسیر، شاهد Loading همه navigationها نیست. کنترل‌ها هنگام transition وضعیت انتظار قابل مشاهده دارند. فرم حین انتظار از بین نمی‌رود.
 

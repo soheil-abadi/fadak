@@ -25,6 +25,14 @@ export interface StayQuote {
   readonly rooms: number;
   readonly total: Money;
 }
+export interface HotelImage {
+  readonly src: string;
+  readonly alt: string;
+}
+export interface HotelLocation {
+  readonly latitude: number;
+  readonly longitude: number;
+}
 export interface HotelSummary {
   readonly id: string;
   readonly name: string;
@@ -33,7 +41,9 @@ export interface HotelSummary {
   readonly stars: StarRating;
   readonly rating: number;
   readonly amenities: readonly Amenity[];
-  readonly image: { readonly src: string; readonly alt: string };
+  readonly image: HotelImage;
+  readonly images: readonly HotelImage[];
+  readonly location: HotelLocation;
   readonly quote: StayQuote;
 }
 export interface HotelDetails extends HotelSummary {

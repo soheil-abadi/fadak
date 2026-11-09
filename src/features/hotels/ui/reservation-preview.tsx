@@ -64,7 +64,8 @@ export function ReservationPreview({
           <div className="summary-total">
             <dt>مبلغ کل اقامت</dt>
             <dd>
-              {formatPrice(hotel.quote.total.amount)} <small>تومان</small>
+              <span className="numeric">{formatPrice(hotel.quote.total.amount)}</span>{' '}
+              <small>تومان</small>
             </dd>
           </div>
         </dl>

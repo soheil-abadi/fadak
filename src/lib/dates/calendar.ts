@@ -10,6 +10,7 @@ export {
   isDateOnly,
   nightsBetween,
   normalizeDigits,
+  toPersianDigits,
   todayInTehran,
 } from './date-only';
 

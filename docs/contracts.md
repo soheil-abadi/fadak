@@ -6,7 +6,7 @@
 
 | فیلد | قرارداد |
 | --- | --- |
-| `city` | یکی از `tehran`، `mashhad`، `shiraz`، `kish`، `isfahan`؛ نمایش به‌ترتیب تهران، مشهد، شیراز، کیش و اصفهان. |
+| `city` | یکی از `tehran`، `mashhad`، `shiraz`، `kish`، `isfahan`؛ نمایش به‌ترتیب تهران، مشهد، شیراز، کیش و اصفهان. فرم مقصد را با جعبه جست‌وجو روی همین نام‌ها انتخاب می‌کند؛ query متن آزاد نمی‌پذیرد. |
 | `checkIn` و `checkOut` | روز واقعی میلادی با ارقام ASCII و قالب دقیق `YYYY-MM-DD`؛ regex به‌تنهایی اعتبار روز را ثابت نمی‌کند. |
 | بازه تاریخ | `todayTehran <= checkIn < checkOut <= todayTehran + 365 days` و اقامت از ۱ تا ۳۰ شب. روز خروج جزو شب‌های اقامت نیست. |
 | `rooms` | عدد صحیح از ۱ تا ۵؛ پیش‌فرض فرم ۱. |
@@ -59,6 +59,16 @@ interface StayQuote {
   readonly total: Money;
 }
 
+interface HotelImage {
+  readonly src: string;
+  readonly alt: string;
+}
+
+interface HotelLocation {
+  readonly latitude: number;
+  readonly longitude: number;
+}
+
 interface HotelSummary {
   readonly id: string;
   readonly name: string;
@@ -67,7 +77,9 @@ interface HotelSummary {
   readonly stars: StarRating;
   readonly rating: number; // 0..10
   readonly amenities: readonly Amenity[];
-  readonly image: { readonly src: string; readonly alt: string };
+  readonly image: HotelImage; // First gallery image for cards
+  readonly images: readonly HotelImage[]; // One to three illustrative photos
+  readonly location: HotelLocation; // Demonstrative coordinates near the city
   readonly quote: StayQuote;
 }
 
@@ -187,7 +199,25 @@ total = nightlyPerRoom * nights * rooms = 36,000,000 IRR = 3,600,000 toman
         ],
         "image": {
           "src": "/images/hotels/room.jpg",
-          "alt": "فضای نمایشی هتل باغ نیلوفر"
+          "alt": "تصویر نمایشی ۱ از هتل باغ نیلوفر"
+        },
+        "images": [
+          {
+            "src": "/images/hotels/room.jpg",
+            "alt": "تصویر نمایشی ۱ از هتل باغ نیلوفر"
+          },
+          {
+            "src": "/images/hotels/resort.jpg",
+            "alt": "تصویر نمایشی ۲ از هتل باغ نیلوفر"
+          },
+          {
+            "src": "/images/hotels/garden.jpg",
+            "alt": "تصویر نمایشی ۳ از هتل باغ نیلوفر"
+          }
+        ],
+        "location": {
+          "latitude": 35.7339,
+          "longitude": 51.3427
         },
         "quote": {
           "nightlyPerRoom": {
@@ -210,7 +240,7 @@ total = nightlyPerRoom * nights * rooms = 36,000,000 IRR = 3,600,000 toman
 
 ## داده Mock و سناریوهای کنترل‌شده
 
-۱۲ هتل ثابت، سه هتل در هر یک از تهران، مشهد، شیراز و کیش وجود دارد؛ اصفهان شهر معتبر بدون fixture است تا حالت خالی طبیعی قابل تکرار باشد. در هر شهر، ستاره‌های ۳، ۴ و ۵، امتیازهای متفاوت و نرخ‌های متفاوت وجود دارد. حداقل یک پیشنهاد ارزان‌تر امتیاز پایین‌تری دارد تا دو sort نتیجه متفاوتی داشته باشند. داده خام شامل `availableRooms` و `maxGuestsPerRoom` است؛ `quote` از اقامت ساخته می‌شود و در fixture به یک تاریخ ثابت گره نمی‌خورد.
+۱۲ هتل ثابت، سه هتل در هر یک از تهران، مشهد، شیراز و کیش وجود دارد؛ اصفهان شهر معتبر بدون fixture است تا حالت خالی طبیعی قابل تکرار باشد. در هر شهر، ستاره‌های ۳، ۴ و ۵، امتیازهای متفاوت و نرخ‌های متفاوت وجود دارد. حداقل یک پیشنهاد ارزان‌تر امتیاز پایین‌تری دارد تا دو sort نتیجه متفاوتی داشته باشند. داده خام شامل `availableRooms`، `maxGuestsPerRoom`، گالری تصاویر نمایشی و مختصات نمایشی نزدیک شهر است؛ `quote` از اقامت ساخته می‌شود و در fixture به یک تاریخ ثابت گره نمی‌خورد.
 
 ظرفیت در تمام بازه‌های معتبر این Mock ثابت است؛ موجودی واقعی روزانه یا افزایش قیمت فصلی شبیه‌سازی نمی‌شود. ورودی شهر، تاریخ و ظرفیت واقعاً در پاسخ یا محاسبه quote اثر می‌گذارد. فیلترها از داده مشتق می‌شوند و پاسخ آماده بر اساس نام یک فیلتر جایگزین محاسبه نمی‌شود.
 

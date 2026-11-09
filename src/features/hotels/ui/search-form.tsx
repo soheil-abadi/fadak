@@ -1,5 +1,5 @@
 'use client';
-import { useRef, useState, type MouseEvent } from 'react';
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
 import { Controller, useForm, useWatch, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { z } from 'zod';
@@ -13,8 +13,10 @@ import {
   LoaderCircle,
   ChevronLeft,
   ChevronRight,
+  Minus,
+  Plus,
 } from 'lucide-react';
-import { CITIES, type HotelError } from '../domain/types';
+import { CITIES, type CityId, type HotelError } from '../domain/types';
 import { createSearchSchema, type HotelSearchInput } from '../schemas/search-schema';
 import { serializeSearch } from '../url-state';
 import {
@@ -32,6 +34,15 @@ type Draft = z.input<ReturnType<typeof createSearchSchema>>;
 type DateField = 'checkIn' | 'checkOut';
 const formatDraft = (value: string | undefined) =>
   value && isDateOnly(value) ? toPersianDate(value).format('YYYY/MM/DD') : '';
+const cityLabel = (id: string | undefined) => CITIES.find((city) => city.id === id)?.name ?? '';
+const formatCount = (value: number) => new Intl.NumberFormat('fa').format(value);
+function filterCities(query: string) {
+  const normalized = query.trim();
+  if (!normalized) return CITIES;
+  return CITIES.filter(
+    (city) => city.name.includes(normalized) || city.description.includes(normalized),
+  );
+}
 export function SearchForm({
   today,
   raw,
@@ -44,11 +55,19 @@ export function SearchForm({
   const { pending, push } = useSearchNavigation();
   const picker = useRef<DatePickerRef>(null);
   const calendarTrigger = useRef<HTMLButtonElement>(null);
+  const occupancyTrigger = useRef<HTMLButtonElement>(null);
+  const cityInput = useRef<HTMLInputElement>(null);
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [monthCount, setMonthCount] = useState(1);
+  const [cityOpen, setCityOpen] = useState(false);
+  const [cityQuery, setCityQuery] = useState(cityLabel(raw.city));
+  const [cityHighlight, setCityHighlight] = useState(0);
+  const [occupancyOpen, setOccupancyOpen] = useState(false);
   const manualDates = useRef<HTMLDetailsElement>(null);
   const checkInInput = useRef<HTMLInputElement>(null);
   const checkOutInput = useRef<HTMLInputElement>(null);
   const committedCheckIn = useRef(raw.checkIn ?? '');
+  const cityListId = useId();
   const [dateText, setDateText] = useState({
     checkIn: formatDraft(raw.checkIn),
     checkOut: formatDraft(raw.checkOut),
@@ -60,7 +79,6 @@ export function SearchForm({
     control,
     setValue,
     getValues,
-    setFocus,
     handleSubmit,
     formState: { errors, dirtyFields },
   } = useForm<Draft, unknown, HotelSearchInput>({
@@ -75,6 +93,10 @@ export function SearchForm({
     },
   });
   const checkout = useWatch({ control, name: 'checkOut' });
+  const rooms = Number(useWatch({ control, name: 'rooms' }) ?? 1);
+  const guests = Number(useWatch({ control, name: 'guests' }) ?? 2);
+  const selectedCity = useWatch({ control, name: 'city' });
+  const cityOptions = filterCities(cityQuery);
   const error = (key: keyof HotelSearchInput) =>
     errors[key]?.message ?? (!dirtyFields[key] ? serverError?.fieldErrors?.[key]?.[0] : undefined);
   const dateError = (field: DateField) =>
@@ -89,6 +111,31 @@ export function SearchForm({
   ]
     .filter(Boolean)
     .join(' ');
+  useEffect(() => {
+    if (!cityOpen) return;
+    function onPointerDown(event: PointerEvent) {
+      const target = event.target as Node;
+      if (cityInput.current?.contains(target)) return;
+      const list = document.getElementById(cityListId);
+      if (list?.contains(target)) return;
+      setCityOpen(false);
+      if (!selectedCity) setCityQuery('');
+      else setCityQuery(cityLabel(selectedCity));
+    }
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, [cityListId, cityOpen, selectedCity]);
+  useEffect(() => {
+    if (!occupancyOpen) return;
+    function onPointerDown(event: PointerEvent) {
+      const target = event.target as Node;
+      const panel = document.getElementById('occupancy-panel');
+      if (occupancyTrigger.current?.contains(target) || panel?.contains(target)) return;
+      setOccupancyOpen(false);
+    }
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, [occupancyOpen]);
   function submit(input: HotelSearchInput) {
     push(`/hotels?${serializeSearch({ input, filters: {}, sort: 'price_asc' })}`);
   }
@@ -113,13 +160,59 @@ export function SearchForm({
     }
     if (isDateOnly(value)) committedCheckIn.current = value;
   }
+  function selectCity(id: CityId) {
+    setValue('city', id, { shouldValidate: true, shouldDirty: true });
+    setCityQuery(cityLabel(id));
+    setCityOpen(false);
+    setCityHighlight(0);
+  }
+  function onCityKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setCityOpen(true);
+      setCityHighlight((index) => Math.min(index + 1, Math.max(cityOptions.length - 1, 0)));
+      return;
+    }
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setCityOpen(true);
+      setCityHighlight((index) => Math.max(index - 1, 0));
+      return;
+    }
+    if (event.key === 'Enter' && cityOpen && cityOptions[cityHighlight]) {
+      event.preventDefault();
+      selectCity(cityOptions[cityHighlight].id);
+      return;
+    }
+    if (event.key === 'Escape' && cityOpen) {
+      event.preventDefault();
+      event.stopPropagation();
+      setCityOpen(false);
+      setCityQuery(cityLabel(selectedCity));
+      cityInput.current?.focus();
+    }
+  }
+  function changeRooms(next: number) {
+    const roomsValue = Math.min(5, Math.max(1, next));
+    setValue('rooms', roomsValue, { shouldValidate: true, shouldDirty: true });
+    if (guests < roomsValue)
+      setValue('guests', roomsValue, { shouldValidate: true, shouldDirty: true });
+  }
+  function changeGuests(next: number) {
+    const guestsValue = Math.min(10, Math.max(1, next));
+    setValue('guests', guestsValue, { shouldValidate: true, shouldDirty: true });
+    if (guestsValue < rooms)
+      setValue('rooms', guestsValue, { shouldValidate: true, shouldDirty: true });
+  }
   function focusInvalid(fields: FieldErrors<Draft>) {
-    if (fields.city) setFocus('city');
+    if (fields.city) cityInput.current?.focus();
     else if (fields.checkIn || fields.checkOut) {
       if (manualDates.current) manualDates.current.open = true;
       (fields.checkIn ? checkInInput : checkOutInput).current?.focus();
-    } else if (fields.rooms) setFocus('rooms');
-    else if (fields.guests) setFocus('guests');
+    } else if (fields.rooms || fields.guests) {
+      setOccupancyOpen(true);
+      occupancyTrigger.current?.focus();
+    }
   }
   return (
     <form
@@ -135,6 +228,12 @@ export function SearchForm({
           picker.current?.closeCalendar();
           calendarTrigger.current?.focus();
         }
+        if (event.key === 'Escape' && occupancyOpen) {
+          event.preventDefault();
+          event.stopPropagation();
+          setOccupancyOpen(false);
+          occupancyTrigger.current?.focus();
+        }
       }}
       className="search-form"
       aria-label="جست‌وجوی اقامتگاه"
@@ -144,19 +243,74 @@ export function SearchForm({
           <label htmlFor="city">
             <MapPin size={18} /> مقصد سفر
           </label>
-          <select
+          <input type="hidden" {...register('city')} />
+          <input
+            ref={cityInput}
             id="city"
-            {...register('city')}
+            role="combobox"
+            type="search"
+            autoComplete="off"
+            spellCheck={false}
+            placeholder="کجا می‌خواهید بروید؟"
+            value={cityQuery}
+            aria-expanded={cityOpen}
+            aria-controls={cityListId}
+            aria-autocomplete="list"
+            aria-activedescendant={
+              cityOpen && cityOptions[cityHighlight]
+                ? `${cityListId}-${cityOptions[cityHighlight].id}`
+                : undefined
+            }
             aria-invalid={!!error('city')}
             aria-describedby={error('city') ? 'city-error' : undefined}
-          >
-            <option value="">کجا می‌خواهید بروید؟</option>
-            {CITIES.map((city) => (
-              <option key={city.id} value={city.id}>
-                {city.name}
-              </option>
-            ))}
-          </select>
+            onChange={(event) => {
+              const value = event.currentTarget.value;
+              setCityQuery(value);
+              setCityOpen(true);
+              setCityHighlight(0);
+              const exact = CITIES.find((city) => city.name === value.trim());
+              setValue('city', (exact?.id ?? '') as Draft['city'], {
+                shouldValidate: true,
+                shouldDirty: true,
+              });
+            }}
+            onKeyDown={onCityKeyDown}
+          />
+          {cityOpen && (
+            <ul
+              id={cityListId}
+              role="listbox"
+              className="city-suggestions"
+              aria-label="مقصدهای موجود"
+            >
+              {cityOptions.length === 0 ? (
+                <li className="city-empty" role="presentation">
+                  مقصدی با این نام پیدا نشد.
+                </li>
+              ) : (
+                cityOptions.map((city, index) => (
+                  <li
+                    key={city.id}
+                    id={`${cityListId}-${city.id}`}
+                    role="option"
+                    aria-selected={selectedCity === city.id || cityHighlight === index}
+                    className={
+                      cityHighlight === index || selectedCity === city.id ? 'is-active' : undefined
+                    }
+                  >
+                    <button
+                      type="button"
+                      onMouseEnter={() => setCityHighlight(index)}
+                      onClick={() => selectCity(city.id)}
+                    >
+                      <strong>{city.name}</strong>
+                      <small>{city.description}</small>
+                    </button>
+                  </li>
+                ))
+              )}
+            </ul>
+          )}
           {error('city') && (
             <p className="field-error" id="city-error">
               {error('city')}
@@ -174,13 +328,22 @@ export function SearchForm({
               <DatePicker
                 ref={picker}
                 id="stay-dates"
+                numberOfMonths={monthCount}
                 render={(value, openCalendar) => (
                   <button
                     ref={calendarTrigger}
                     type="button"
                     id="stay-dates"
                     className="date-input"
-                    onClick={openCalendar}
+                    onClick={() => {
+                      setMonthCount(
+                        typeof window.matchMedia === 'function' &&
+                          window.matchMedia('(min-width: 768px)').matches
+                          ? 2
+                          : 1,
+                      );
+                      openCalendar();
+                    }}
                     aria-expanded={calendarOpen}
                     aria-describedby={dateDescription}
                   >
@@ -275,36 +438,81 @@ export function SearchForm({
           </p>
         </div>
         <div className="search-field guests-field">
-          <label htmlFor="guests">
+          <span className="field-label" id="occupancy-label">
             <Users size={18} /> مسافران و اتاق‌ها
-          </label>
-          <div className="guest-selects">
-            <select
-              id="guests"
-              {...register('guests')}
-              aria-invalid={!!error('guests')}
-              aria-describedby={error('guests') ? 'guests-error' : undefined}
+          </span>
+          <button
+            ref={occupancyTrigger}
+            type="button"
+            className="occupancy-trigger"
+            aria-expanded={occupancyOpen}
+            aria-controls="occupancy-panel"
+            aria-describedby={`occupancy-label${error('guests') || error('rooms') ? ' guests-error' : ''}`}
+            onClick={() => setOccupancyOpen((open) => !open)}
+          >
+            {formatCount(guests)} مسافر، {formatCount(rooms)} اتاق
+          </button>
+          {occupancyOpen && (
+            <div
+              id="occupancy-panel"
+              className="occupancy-panel"
+              role="group"
+              aria-label="تعداد مسافر و اتاق"
             >
-              {Array.from({ length: 10 }, (_, i) => (
-                <option key={i} value={i + 1}>
-                  {new Intl.NumberFormat('fa').format(i + 1)} مسافر
-                </option>
-              ))}
-            </select>
-            <span>،</span>
-            <select
-              aria-label="تعداد اتاق"
-              {...register('rooms')}
-              aria-invalid={!!error('rooms')}
-              aria-describedby={error('rooms') ? 'guests-error' : undefined}
-            >
-              {Array.from({ length: 5 }, (_, i) => (
-                <option key={i} value={i + 1}>
-                  {new Intl.NumberFormat('fa').format(i + 1)} اتاق
-                </option>
-              ))}
-            </select>
-          </div>
+              <div className="occupancy-row">
+                <div>
+                  <strong>اتاق</strong>
+                  <small>از ۱ تا ۵</small>
+                </div>
+                <div className="stepper">
+                  <button
+                    type="button"
+                    aria-label="کاهش تعداد اتاق"
+                    disabled={rooms <= 1}
+                    onClick={() => changeRooms(rooms - 1)}
+                  >
+                    <Minus size={16} />
+                  </button>
+                  <span aria-live="polite">{formatCount(rooms)}</span>
+                  <button
+                    type="button"
+                    aria-label="افزایش تعداد اتاق"
+                    disabled={rooms >= 5}
+                    onClick={() => changeRooms(rooms + 1)}
+                  >
+                    <Plus size={16} />
+                  </button>
+                </div>
+              </div>
+              <div className="occupancy-row">
+                <div>
+                  <strong>مسافر</strong>
+                  <small>از ۱ تا ۱۰؛ حداقل یک نفر برای هر اتاق</small>
+                </div>
+                <div className="stepper">
+                  <button
+                    type="button"
+                    aria-label="کاهش تعداد مسافر"
+                    disabled={guests <= 1}
+                    onClick={() => changeGuests(guests - 1)}
+                  >
+                    <Minus size={16} />
+                  </button>
+                  <span aria-live="polite">{formatCount(guests)}</span>
+                  <button
+                    type="button"
+                    aria-label="افزایش تعداد مسافر"
+                    disabled={guests >= 10}
+                    onClick={() => changeGuests(guests + 1)}
+                  >
+                    <Plus size={16} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+          <input type="hidden" {...register('rooms')} />
+          <input type="hidden" {...register('guests')} />
           {(error('guests') || error('rooms')) && (
             <p className="field-error" id="guests-error">
               {error('guests') ?? error('rooms')}
